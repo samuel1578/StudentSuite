@@ -10,6 +10,7 @@ import About from './pages/About';
 import Contact from './pages/Contact';
 import RoomDetail from './pages/RoomDetail';
 import News from './pages/News';
+import CurrentBooking from './pages/CurrentBooking';
 import client from './appwrite.ts';
 import { Account } from 'appwrite';
 
@@ -17,6 +18,8 @@ function Router() {
   const { currentPath } = useRouter();
 
   const renderPage = () => {
+    console.log('Current path:', currentPath);
+
     // Handle room detail routes
     if (currentPath.startsWith('/rooms/')) {
       const roomId = currentPath.split('/rooms/')[1];
@@ -30,6 +33,8 @@ function Router() {
         return <Rooms />;
       case '/booking':
         return <Booking />;
+      case '/current-booking':
+        return <CurrentBooking />;
       case '/news':
         return <News />;
       case '/menu':

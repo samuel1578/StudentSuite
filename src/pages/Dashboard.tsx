@@ -233,10 +233,12 @@ export default function Dashboard() {
   };
 
   const handleMenuItemClick = (path: string, requiresAuth: boolean) => {
+    console.log('Menu item clicked:', path, 'requiresAuth:', requiresAuth, 'isAuthenticated:', isAuthenticated);
     if (requiresAuth && !isAuthenticated) {
       alert('Please sign in to access this feature.');
       return;
     }
+    console.log('Calling navigate with:', path);
     navigate(path);
   };
 

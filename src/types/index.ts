@@ -67,10 +67,12 @@ export interface Booking {
 }
 
 export interface BookingFormData {
-  studentName: string;
+  fullName: string;
   email: string;
   phone: string;
   roomId: string;
   checkIn: string;
   checkOut: string;
+  guests: number;
+  specialRequests?: string;
 }

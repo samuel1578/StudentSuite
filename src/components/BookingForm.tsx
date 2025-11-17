@@ -4,33 +4,37 @@ import { rooms } from '../data/sampleData';
 
 interface BookingFormProps {
   onSubmit?: (data: BookingFormData) => void;
+  disabled?: boolean;
 }
 
-export default function BookingForm({ onSubmit }: BookingFormProps) {
+export default function BookingForm({ onSubmit, disabled = false }: BookingFormProps) {
   const [formData, setFormData] = useState<BookingFormData>({
-    studentName: '',
+    fullName: '',
     email: '',
     phone: '',
     roomId: '',
     checkIn: '',
-    checkOut: ''
+    checkOut: '',
+    guests: 1,
+    specialRequests: ''
   });
 
   const [submitted, setSubmitted] = useState(false);
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
-    if (onSubmit) {
+    if (onSubmit && !disabled) {
       onSubmit(formData);
     }
     setSubmitted(true);
     setTimeout(() => setSubmitted(false), 3000);
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+    const value = e.target.type === 'number' ? parseInt(e.target.value) : e.target.value;
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value
+      [e.target.name]: value
     });
   };
 
@@ -40,15 +44,16 @@ export default function BookingForm({ onSubmit }: BookingFormProps) {
     <form onSubmit={handleSubmit} className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 space-y-6">
       <div>
         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-          Student Name *
+          Full Name *
         </label>
         <input
           type="text"
-          name="studentName"
-          value={formData.studentName}
+          name="fullName"
+          value={formData.fullName}
           onChange={handleChange}
           required
-          className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+          disabled={disabled}
+          className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-transparent dark:bg-gray-700 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
           placeholder="Enter your full name"
         />
       </div>
@@ -63,7 +68,8 @@ export default function BookingForm({ onSubmit }: BookingFormProps) {
           value={formData.email}
           onChange={handleChange}
           required
-          className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+          disabled={disabled}
+          className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-transparent dark:bg-gray-700 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
           placeholder="student@example.com"
         />
       </div>
@@ -78,7 +84,8 @@ export default function BookingForm({ onSubmit }: BookingFormProps) {
           value={formData.phone}
           onChange={handleChange}
           required
-          className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+          disabled={disabled}
+          className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-transparent dark:bg-gray-700 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
           placeholder="+233 24 123 4567"
         />
       </div>
@@ -92,7 +99,8 @@ export default function BookingForm({ onSubmit }: BookingFormProps) {
           value={formData.roomId}
           onChange={handleChange}
           required
-          className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+          disabled={disabled}
+          className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-transparent dark:bg-gray-700 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <option value="">Choose a room</option>
           {availableRooms.map(room => (
@@ -114,7 +122,8 @@ export default function BookingForm({ onSubmit }: BookingFormProps) {
             value={formData.checkIn}
             onChange={handleChange}
             required
-            className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+            disabled={disabled}
+            className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-transparent dark:bg-gray-700 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
           />
         </div>
 
@@ -128,19 +137,53 @@ export default function BookingForm({ onSubmit }: BookingFormProps) {
             value={formData.checkOut}
             onChange={handleChange}
             required
-            className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+            disabled={disabled}
+            className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-transparent dark:bg-gray-700 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
           />
         </div>
       </div>
 
+      <div>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+          Number of Guests *
+        </label>
+        <input
+          type="number"
+          name="guests"
+          value={formData.guests}
+          onChange={handleChange}
+          required
+          min="1"
+          max="4"
+          disabled={disabled}
+          className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-transparent dark:bg-gray-700 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+        />
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+          Special Requests (Optional)
+        </label>
+        <textarea
+          name="specialRequests"
+          value={formData.specialRequests}
+          onChange={handleChange}
+          rows={3}
+          disabled={disabled}
+          className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-transparent dark:bg-gray-700 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+          placeholder="Any special requirements or requests?"
+        />
+      </div>
+
       <button
         type="submit"
-        className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors"
+        disabled={disabled}
+        className="w-full bg-rose-600 text-white py-3 rounded-lg font-semibold hover:bg-rose-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
       >
-        Submit Booking Request
+        {disabled ? 'Submitting...' : 'Submit Booking Request'}
       </button>
 
-      {submitted && (
+      {submitted && !disabled && (
         <div className="bg-green-100 dark:bg-green-900 border border-green-400 dark:border-green-600 text-green-700 dark:text-green-200 px-4 py-3 rounded-lg">
           Booking request submitted successfully! We'll contact you soon.
         </div>

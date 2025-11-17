@@ -20,9 +20,11 @@ export function RouterProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const navigate = (path: string) => {
+    console.log('Navigate called with path:', path);
     window.history.pushState({}, '', path);
     setCurrentPath(path);
     window.scrollTo(0, 0);
+    console.log('After navigation, currentPath:', path);
   };
 
   return (
