@@ -152,12 +152,25 @@ export default function Dashboard() {
       // Provide more specific error messages
       let errorMessage = error.message || 'An unexpected error occurred';
 
-      if (error.message?.includes('network') || error.message?.includes('fetch')) {
-        errorMessage = 'Network error. Please check your internet connection and try again.';
-      } else if (error.code === 409) {
+      // Check for specific Appwrite error codes first
+      if (error.code === 409) {
         errorMessage = 'An account with this email already exists. Please try signing in instead.';
       } else if (error.code === 401) {
         errorMessage = 'Invalid email or password. Please check your credentials.';
+      } else if (error.code === 400) {
+        errorMessage = 'Invalid input. Please check your email and password meet the requirements.';
+      } else if (error.type === 'general_unauthorized_scope' || error.code === 403) {
+        errorMessage = 'Authentication service is not properly configured. Please contact support.';
+      } else if (error.type === 'project_unknown' || error.message?.includes('project') && error.message?.includes('not found')) {
+        errorMessage = 'Authentication service is not available. Please contact support.';
+      } else if (error.message?.includes('CORS') || error.type === 'general_cors_disabled') {
+        errorMessage = 'Cannot connect to authentication service. Please try again later or contact support.';
+      } else if (error.name === 'TypeError' && error.message?.includes('fetch')) {
+        // Only treat as network error if it's a TypeError with fetch (actual network failure)
+        errorMessage = 'Network error. Please check your internet connection and try again.';
+      } else if (error.message?.toLowerCase().includes('network') && !error.message?.includes('fetch')) {
+        // Only treat as network error if explicitly mentioned and not just from fetch API
+        errorMessage = 'Network error. Please check your internet connection and try again.';
       }
 
       alert(`${mode} failed: ${errorMessage}`);
