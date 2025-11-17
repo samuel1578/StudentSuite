@@ -149,7 +149,7 @@ export default function Dashboard() {
     } catch (error: any) {
       console.error(`${mode} failed:`, error);
 
-      // Provide more specific error messages
+      // Provide more specific error messages based on error type
       let errorMessage = error.message || 'An unexpected error occurred';
 
       // Check for specific Appwrite error codes first
