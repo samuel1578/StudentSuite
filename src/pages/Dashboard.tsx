@@ -1,4 +1,4 @@
-import { useState, useEffect, type FormEvent } from 'react';
+import { useState, useEffect, type FormEvent, Fragment } from 'react';
 import {
   ArrowRight,
   Calendar,
@@ -11,6 +11,7 @@ import {
   MessageSquare,
   Newspaper,
   ShieldCheck,
+  BusFront,
   User,
   UserPlus,
   Wrench
@@ -28,6 +29,9 @@ export default function Dashboard() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState<{ name: string; email: string } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [transportChoice, setTransportChoice] = useState<'yes' | 'no' | ''>('');
+  const [transportMessage, setTransportMessage] = useState('');
+  const [transportError, setTransportError] = useState('');
   const { navigate } = useRouter();
 
   // Check if user is already authenticated
@@ -48,6 +52,14 @@ export default function Dashboard() {
 
     checkAuth();
   }, []);
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setTransportChoice('');
+      setTransportMessage('');
+      setTransportError('');
+    }
+  }, [isAuthenticated]);
 
   const menuItems = [
     {
@@ -177,6 +189,27 @@ export default function Dashboard() {
     }
   };
 
+  const handleTransportationSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    if (!isAuthenticated) {
+      alert('Please sign in to share your transportation preference.');
+      return;
+    }
+
+    if (!transportChoice) {
+      setTransportError('Please choose an option before submitting.');
+      return;
+    }
+
+    setTransportError('');
+    const message = transportChoice === 'yes'
+      ? 'Thanks! We will prioritize transportation services based on interest.'
+      : 'Thanks for the feedback. Transportation will remain optional for now.';
+    setTransportMessage(message);
+    console.log('Transportation preference submitted:', transportChoice);
+  };
+
   const handleGoogleAuth = async () => {
     try {
       // Get current origin for redirect URLs
@@ -243,8 +276,8 @@ export default function Dashboard() {
                   type="button"
                   onClick={() => setActiveTab('signup')}
                   className={`flex-1 rounded-xl border px-4 py-2 text-sm font-semibold transition ${activeTab === 'signup'
-                      ? 'border-rose-600 bg-rose-600 text-white'
-                      : 'border-gray-300 text-gray-700 hover:border-rose-400 dark:border-gray-700 dark:text-gray-300'
+                    ? 'border-rose-600 bg-rose-600 text-white'
+                    : 'border-gray-300 text-gray-700 hover:border-rose-400 dark:border-gray-700 dark:text-gray-300'
                     }`}
                 >
                   Sign Up
@@ -253,8 +286,8 @@ export default function Dashboard() {
                   type="button"
                   onClick={() => setActiveTab('login')}
                   className={`flex-1 rounded-xl border px-4 py-2 text-sm font-semibold transition ${activeTab === 'login'
-                      ? 'border-rose-600 bg-rose-600 text-white'
-                      : 'border-gray-300 text-gray-700 hover:border-rose-400 dark:border-gray-700 dark:text-gray-300'
+                    ? 'border-rose-600 bg-rose-600 text-white'
+                    : 'border-gray-300 text-gray-700 hover:border-rose-400 dark:border-gray-700 dark:text-gray-300'
                     }`}
                 >
                   Sign In
@@ -372,24 +405,124 @@ export default function Dashboard() {
               const Icon = item.icon;
               const isDisabled = item.requiresAuth && !isAuthenticated;
 
+              if (item.title === 'Support') {
+                return (
+                  <Fragment key={item.title}>
+                    <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+                      <div className="flex items-center gap-3 mb-3">
+                        <BusFront className="h-5 w-5 text-rose-600 dark:text-rose-400" />
+                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                          Campus Transportation Survey
+                        </h3>
+                      </div>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">
+                        Let us know if you want campus transportation included in our next destination plans.
+                      </p>
+                      {isAuthenticated ? (
+                        <form onSubmit={handleTransportationSubmit} className="mt-4 space-y-4">
+                          <div className="flex flex-wrap gap-4">
+                            <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+                              <input
+                                type="radio"
+                                name="transport"
+                                value="yes"
+                                checked={transportChoice === 'yes'}
+                                onChange={() => {
+                                  setTransportChoice('yes');
+                                  setTransportError('');
+                                  setTransportMessage('');
+                                }}
+                                className="h-4 w-4 text-rose-600 focus:ring-rose-500"
+                              />
+                              Yes, please include transportation
+                            </label>
+                            <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+                              <input
+                                type="radio"
+                                name="transport"
+                                value="no"
+                                checked={transportChoice === 'no'}
+                                onChange={() => {
+                                  setTransportChoice('no');
+                                  setTransportError('');
+                                  setTransportMessage('');
+                                }}
+                                className="h-4 w-4 text-rose-600 focus:ring-rose-500"
+                              />
+                              No, I can arrange my own ride
+                            </label>
+                          </div>
+                          {transportError && (
+                            <p className="text-sm text-rose-600 dark:text-rose-400">{transportError}</p>
+                          )}
+                          {transportMessage && (
+                            <p className="text-sm text-emerald-600 dark:text-emerald-400">{transportMessage}</p>
+                          )}
+                          <button
+                            type="submit"
+                            className="inline-flex items-center gap-2 rounded-lg bg-rose-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-rose-700"
+                          >
+                            Submit preference
+                          </button>
+                        </form>
+                      ) : (
+                        <p className="mt-4 text-sm text-gray-500 dark:text-gray-400">
+                          Sign in to share your transportation preference.
+                        </p>
+                      )}
+                    </div>
+
+                    <button
+                      onClick={() => handleMenuItemClick(item.path, item.requiresAuth)}
+                      disabled={isDisabled}
+                      className={`w-full rounded-xl border p-6 text-left transition ${isDisabled
+                        ? 'border-gray-200 bg-gray-100 opacity-60 dark:border-gray-700 dark:bg-gray-800'
+                        : 'border-gray-200 bg-white hover:border-rose-300 hover:shadow-md dark:border-gray-700 dark:bg-gray-800 dark:hover:border-rose-600'
+                        }`}
+                    >
+                      <div className="flex items-center gap-4">
+                        <div className={`h-12 w-12 rounded-lg flex items-center justify-center ${isDisabled
+                          ? 'bg-gray-200 dark:bg-gray-700'
+                          : 'bg-rose-100 dark:bg-rose-900/30'
+                          }`}>
+                          <Icon className={`h-6 w-6 ${isDisabled
+                            ? 'text-gray-400 dark:text-gray-500'
+                            : 'text-rose-600 dark:text-rose-400'
+                            }`} />
+                        </div>
+                        <div className="flex-1">
+                          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                            {item.title}
+                          </h3>
+                          <p className="text-sm text-gray-500 dark:text-gray-400">
+                            {item.description}
+                          </p>
+                        </div>
+                        <ArrowRight className="h-5 w-5 text-gray-400" />
+                      </div>
+                    </button>
+                  </Fragment>
+                );
+              }
+
               return (
                 <button
                   key={item.title}
                   onClick={() => handleMenuItemClick(item.path, item.requiresAuth)}
                   disabled={isDisabled}
                   className={`w-full rounded-xl border p-6 text-left transition ${isDisabled
-                      ? 'border-gray-200 bg-gray-100 opacity-60 dark:border-gray-700 dark:bg-gray-800'
-                      : 'border-gray-200 bg-white hover:border-rose-300 hover:shadow-md dark:border-gray-700 dark:bg-gray-800 dark:hover:border-rose-600'
+                    ? 'border-gray-200 bg-gray-100 opacity-60 dark:border-gray-700 dark:bg-gray-800'
+                    : 'border-gray-200 bg-white hover:border-rose-300 hover:shadow-md dark:border-gray-700 dark:bg-gray-800 dark:hover:border-rose-600'
                     }`}
                 >
                   <div className="flex items-center gap-4">
                     <div className={`h-12 w-12 rounded-lg flex items-center justify-center ${isDisabled
-                        ? 'bg-gray-200 dark:bg-gray-700'
-                        : 'bg-rose-100 dark:bg-rose-900/30'
+                      ? 'bg-gray-200 dark:bg-gray-700'
+                      : 'bg-rose-100 dark:bg-rose-900/30'
                       }`}>
                       <Icon className={`h-6 w-6 ${isDisabled
-                          ? 'text-gray-400 dark:text-gray-500'
-                          : 'text-rose-600 dark:text-rose-400'
+                        ? 'text-gray-400 dark:text-gray-500'
+                        : 'text-rose-600 dark:text-rose-400'
                         }`} />
                     </div>
                     <div className="flex-1">
