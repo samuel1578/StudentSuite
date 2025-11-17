@@ -22,7 +22,7 @@ function Router() {
       const roomId = currentPath.split('/rooms/')[1];
       return <RoomDetail roomId={roomId} />;
     }
-    
+
     switch (currentPath) {
       case '/':
         return <Home />;
@@ -48,14 +48,19 @@ function Router() {
 }
 
 function App() {
-  console.log("Appwrite client:", client);
-  
-  // Test Appwrite connection
-  const account = new Account(client);
-  account.get()
-    .then(res => console.log("Appwrite account.get → success", res))
-    .catch(err => console.log("Appwrite account.get → error", err));
-  
+  console.log("App loaded successfully");
+
+  // Only test Appwrite connection if environment variables are available
+  if (import.meta.env.VITE_APPWRITE_ENDPOINT && import.meta.env.VITE_APPWRITE_PROJECT_ID) {
+    console.log("Appwrite client:", client);
+    const account = new Account(client);
+    account.get()
+      .then(res => console.log("Appwrite account.get → success", res))
+      .catch(err => console.log("Appwrite account.get → error", err));
+  } else {
+    console.warn("Appwrite environment variables not found. Some features may not work.");
+  }
+
   return (
     <ThemeProvider>
       <RouterProvider>
