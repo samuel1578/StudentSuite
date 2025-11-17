@@ -4,13 +4,12 @@ import { useRouter } from './context/RouterContext';
 import Layout from './components/Layout';
 import Home from './pages/Home';
 import Rooms from './pages/Rooms';
-import Booking from './pages/Booking';
+import CurrentBooking from './pages/CurrentBooking';
 import Dashboard from './pages/Dashboard';
 import About from './pages/About';
 import Contact from './pages/Contact';
 import RoomDetail from './pages/RoomDetail';
 import News from './pages/News';
-import CurrentBooking from './pages/CurrentBooking';
 import client from './appwrite.ts';
 import { Account } from 'appwrite';
 
@@ -33,7 +32,6 @@ function Router() {
       case '/rooms':
         return <Rooms />;
       case '/booking':
-        return <Booking />;
       case '/current-booking':
         return <CurrentBooking />;
       case '/news':
