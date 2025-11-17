@@ -8,15 +8,12 @@ interface RouterContextType {
 const RouterContext = createContext<RouterContextType | undefined>(undefined);
 
 export function RouterProvider({ children }: { children: ReactNode }) {
-  const [currentPath, setCurrentPath] = useState('/');
+  const [currentPath, setCurrentPath] = useState(() => window.location.pathname);
 
   useEffect(() => {
     const syncPath = () => {
       setCurrentPath(window.location.pathname);
     };
-
-    // Sync immediately on mount to capture initial path (supports direct loads like /current-booking)
-    syncPath();
 
     window.addEventListener('popstate', syncPath);
     return () => window.removeEventListener('popstate', syncPath);
