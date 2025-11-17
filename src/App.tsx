@@ -19,14 +19,15 @@ function Router() {
 
   const renderPage = () => {
     console.log('Current path:', currentPath);
+    const normalizedPath = currentPath.replace(/\/+$/, '') || '/';
 
     // Handle room detail routes
-    if (currentPath.startsWith('/rooms/')) {
-      const roomId = currentPath.split('/rooms/')[1];
+    if (normalizedPath.startsWith('/rooms/')) {
+      const roomId = normalizedPath.split('/rooms/')[1];
       return <RoomDetail roomId={roomId} />;
     }
 
-    switch (currentPath) {
+    switch (normalizedPath) {
       case '/':
         return <Home />;
       case '/rooms':
