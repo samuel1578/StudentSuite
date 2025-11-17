@@ -12,6 +12,13 @@ const databases = new Databases(client);
 
 const DATABASE_ID = '691b378400072f91e003';
 const BOOKINGS_COLLECTION_ID = 'bookings';
+const DEFAULT_HOSTEL_ID = 'student-suite-main';
+const ROOM_MONTHLY_RATES: Record<string, number> = {
+    'cozy-single-room': 800,
+    'double-delight-room': 600,
+    'executive-suite-room': 1200,
+    'penthouse-suite-room': 1500
+};
 
 export default function CurrentBooking() {
     const { navigate } = useRouter();
@@ -60,16 +67,34 @@ export default function CurrentBooking() {
         setSubmitSuccess(false);
 
         try {
+            const checkInISO = new Date(data.checkIn).toISOString();
+            const checkOutISO = new Date(data.checkOut).toISOString();
+
+            const monthRate = ROOM_MONTHLY_RATES[data.roomId] ?? 0;
+            const stayDays = Math.max(
+                1,
+                Math.ceil(
+                    (new Date(data.checkOut).getTime() - new Date(data.checkIn).getTime()) /
+                    (1000 * 60 * 60 * 24)
+                )
+            );
+            const estimatedTotal =
+                monthRate === 0
+                    ? 0
+                    : Number(((monthRate / 30) * stayDays).toFixed(2));
+
             const bookingData = {
                 fullName: data.fullName,
                 email: data.email,
                 phone: data.phone,
                 roomId: data.roomId,
-                checkIn: data.checkIn, // Keep as date string, Appwrite will convert to datetime
-                checkOut: data.checkOut, // Keep as date string, Appwrite will convert to datetime
+                checkIn: checkInISO,
+                checkOut: checkOutISO,
                 guests: data.guests,
                 specialRequests: data.specialRequests || '',
-                status: 'pending'
+                status: 'pending',
+                hostelId: DEFAULT_HOSTEL_ID,
+                totalAmount: estimatedTotal
             };
 
             const result = await createBooking(bookingData);
