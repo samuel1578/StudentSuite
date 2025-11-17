@@ -51,6 +51,13 @@ export default function Dashboard() {
 
   const menuItems = [
     {
+      title: 'Book a Room',
+      description: 'Reserve your accommodation by filling out our booking form.',
+      icon: Calendar,
+      path: '/current-booking',
+      requiresAuth: false
+    },
+    {
       title: 'Current Booking',
       description: 'View your active reservation details, check-in dates, and room information.',
       icon: Home,

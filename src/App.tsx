@@ -4,7 +4,7 @@ import { useRouter } from './context/RouterContext';
 import Layout from './components/Layout';
 import Home from './pages/Home';
 import Rooms from './pages/Rooms';
-import Booking from './pages/Booking';
+import CurrentBooking from './pages/CurrentBooking';
 import Dashboard from './pages/Dashboard';
 import About from './pages/About';
 import Contact from './pages/Contact';
@@ -29,7 +29,8 @@ function Router() {
       case '/rooms':
         return <Rooms />;
       case '/booking':
-        return <Booking />;
+      case '/current-booking':
+        return <CurrentBooking />;
       case '/news':
         return <News />;
       case '/menu':
