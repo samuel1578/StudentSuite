@@ -18,20 +18,22 @@ import {
 } from 'lucide-react';
 import DarkModeToggle from '../components/DarkModeToggle';
 import { useRouter } from '../context/RouterContext';
-import { Account } from 'appwrite';
+import { Account, Databases } from 'appwrite';
 import client from '../appwrite';
 
 // Create Account instance once at module level
 const account = new Account(client);
+const databases = new Databases(client);
 
 export default function Dashboard() {
   const [activeTab, setActiveTab] = useState<'signup' | 'login'>('signup');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [user, setUser] = useState<{ name: string; email: string } | null>(null);
+  const [user, setUser] = useState<{ name: string; email: string; role: 'user' | 'admin' } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [transportChoice, setTransportChoice] = useState<'yes' | 'no' | ''>('');
   const [transportMessage, setTransportMessage] = useState('');
   const [transportError, setTransportError] = useState('');
+  const [adminBookings, setAdminBookings] = useState<any[]>([]);
   const { navigate } = useRouter();
 
   // Check if user is already authenticated
@@ -39,8 +41,19 @@ export default function Dashboard() {
     const checkAuth = async () => {
       try {
         const currentUser = await account.get();
-        setUser({ name: currentUser.name, email: currentUser.email });
+        const role = currentUser.email?.includes('admin') ? 'admin' : 'user';
+        setUser({ name: currentUser.name, email: currentUser.email, role });
         setIsAuthenticated(true);
+
+        // Fetch admin bookings if admin
+        if (role === 'admin') {
+          try {
+            const response = await databases.listDocuments('691b378400072f91e003', 'bookings');
+            setAdminBookings(response.documents);
+          } catch (error) {
+            console.error('Failed to fetch bookings:', error);
+          }
+        }
       } catch (error) {
         console.log('User not authenticated');
         setIsAuthenticated(false);
@@ -67,49 +80,73 @@ export default function Dashboard() {
       description: 'Reserve your accommodation by filling out our booking form.',
       icon: Calendar,
       path: '/current-booking',
-      requiresAuth: false
+      requiresAuth: false,
+      roles: ['user', 'admin']
     },
     {
       title: 'Current Booking',
       description: 'View your active reservation details, check-in dates, and room information.',
       icon: Home,
       path: '/current-booking',
-      requiresAuth: true
+      requiresAuth: true,
+      roles: ['user', 'admin']
     },
     {
       title: 'Booking History',
       description: 'Access your past and upcoming bookings, download receipts and documents.',
       icon: History,
       path: '/booking-history',
-      requiresAuth: true
+      requiresAuth: true,
+      roles: ['user', 'admin']
     },
     {
       title: 'News & Updates',
       description: 'Stay informed about property updates, community events, and announcements.',
       icon: Newspaper,
       path: '/news',
-      requiresAuth: false
+      requiresAuth: false,
+      roles: ['user', 'admin']
     },
     {
       title: 'Maintenance',
       description: 'Submit maintenance requests and track the status of your service tickets.',
       icon: Wrench,
       path: '/maintenance',
-      requiresAuth: true
+      requiresAuth: true,
+      roles: ['user', 'admin']
     },
     {
       title: 'Messages',
       description: 'Communicate with property management and access your message history.',
       icon: MessageSquare,
       path: '/messages',
-      requiresAuth: true
+      requiresAuth: true,
+      roles: ['user', 'admin']
     },
     {
       title: 'Support',
       description: 'Get help from our support team, access FAQ, and contact information.',
       icon: ShieldCheck,
       path: '/support',
-      requiresAuth: false
+      requiresAuth: false,
+      roles: ['user', 'admin']
+    },
+    // Admin only items
+    {
+      title: 'Admin Dashboard',
+      description: 'Manage bookings, users, and system settings.',
+      icon: ShieldCheck,
+      path: '/admin',
+      requiresAuth: true,
+      roles: ['admin']
+    },
+    {
+      title: 'Booking Management',
+      description: 'Review and update booking statuses.',
+      icon: Calendar,
+      path: '/admin/bookings',
+      requiresAuth: true,
+      roles: ['admin']
     }
   ];
 
@@ -161,7 +198,8 @@ export default function Dashboard() {
 
       // Get user info and update state
       const currentUser = await account.get();
-      setUser({ name: currentUser.name, email: currentUser.email });
+      const role = currentUser.email?.includes('admin') ? 'admin' : 'user';
+      setUser({ name: currentUser.name, email: currentUser.email, role });
       setIsAuthenticated(true);
       console.log('User info:', currentUser);
 
@@ -239,10 +277,14 @@ export default function Dashboard() {
     }
   };
 
-  const handleMenuItemClick = (path: string, requiresAuth: boolean) => {
-    console.log('Menu item clicked:', path, 'requiresAuth:', requiresAuth, 'isAuthenticated:', isAuthenticated);
+  const handleMenuItemClick = (path: string, requiresAuth: boolean, roles: string[]) => {
+    console.log('Menu item clicked:', path, 'requiresAuth:', requiresAuth, 'isAuthenticated:', isAuthenticated, 'userRole:', user?.role);
     if (requiresAuth && !isAuthenticated) {
       alert('Please sign in to access this feature.');
+      return;
+    }
+    if (!roles.includes(user?.role || 'user')) {
+      alert('You do not have permission to access this feature.');
       return;
     }
     console.log('Calling navigate with:', path);
@@ -410,7 +452,7 @@ export default function Dashboard() {
               </p>
             </div>
 
-            {menuItems.map((item) => {
+            {menuItems.filter(item => item.roles.includes(user?.role || 'user')).map((item) => {
               const Icon = item.icon;
               const isDisabled = item.requiresAuth && !isAuthenticated;
 
@@ -482,7 +524,7 @@ export default function Dashboard() {
                     </div>
 
                     <button
-                      onClick={() => handleMenuItemClick(item.path, item.requiresAuth)}
+                      onClick={() => handleMenuItemClick(item.path, item.requiresAuth, item.roles)}
                       disabled={isDisabled}
                       className={`w-full rounded-xl border p-6 text-left transition ${isDisabled
                         ? 'border-gray-200 bg-gray-100 opacity-60 dark:border-gray-700 dark:bg-gray-800'
@@ -517,7 +559,7 @@ export default function Dashboard() {
               return (
                 <button
                   key={item.title}
-                  onClick={() => handleMenuItemClick(item.path, item.requiresAuth)}
+                  onClick={() => handleMenuItemClick(item.path, item.requiresAuth, item.roles)}
                   disabled={isDisabled}
                   className={`w-full rounded-xl border p-6 text-left transition ${isDisabled
                     ? 'border-gray-200 bg-gray-100 opacity-60 dark:border-gray-700 dark:bg-gray-800'
@@ -563,13 +605,63 @@ export default function Dashboard() {
                 ))}
               </div>
               <button
-                onClick={() => handleMenuItemClick('/news', false)}
+                onClick={() => handleMenuItemClick('/news', false, ['user', 'admin'])}
                 className="mt-4 text-sm text-rose-600 hover:text-rose-700 dark:text-rose-400 dark:hover:text-rose-300"
               >
                 View all news →
               </button>
             </div>
           </div>
+
+          {/* Admin Booking Management */}
+          {user?.role === 'admin' && (
+            <div className="space-y-4">
+              <div className="text-center mb-4">
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white">Admin Panel</h2>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Manage bookings and system settings
+                </p>
+              </div>
+
+              <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Booking Management</h3>
+                <div className="space-y-4">
+                  {adminBookings.map((booking: any) => (
+                    <div key={booking.$id} className="border border-gray-200 rounded-lg p-4 dark:border-gray-700">
+                      <div className="flex justify-between items-start mb-2">
+                        <div>
+                          <p className="font-medium text-gray-900 dark:text-white">{booking.fullName}</p>
+                          <p className="text-sm text-gray-500 dark:text-gray-400">{booking.email}</p>
+                        </div>
+                        <select
+                          value={booking.status}
+                          onChange={async (e) => {
+                            try {
+                              await databases.updateDocument('691b378400072f91e003', 'bookings', booking.$id, { status: e.target.value });
+                              setAdminBookings(prev => prev.map(b => b.$id === booking.$id ? { ...b, status: e.target.value } : b));
+                            } catch (error) {
+                              console.error('Failed to update status:', error);
+                            }
+                          }}
+                          className="px-3 py-1 border border-gray-300 rounded text-sm dark:border-gray-600 dark:bg-gray-700"
+                        >
+                          <option value="pending">Pending</option>
+                          <option value="accepted">Accepted</option>
+                          <option value="awaiting_payment">Awaiting Payment</option>
+                          <option value="finished">Finished</option>
+                        </select>
+                      </div>
+                      <div className="text-sm text-gray-600 dark:text-gray-400">
+                        <p>Room: {booking.roomId}</p>
+                        <p>Check-in: {new Date(booking.checkIn).toLocaleDateString()}</p>
+                        <p>Check-out: {new Date(booking.checkOut).toLocaleDateString()}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
