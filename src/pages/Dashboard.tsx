@@ -25,6 +25,20 @@ import client from '../appwrite';
 const account = new Account(client);
 const databases = new Databases(client);
 
+// Appwrite DB and Collection IDs — update these placeholders with your actual database and collection IDs
+const DB_ID = '691b378400072f91e003'; // TODO: Replace with actual DB ID
+const COLLECTION_ID = 'bookings'; // TODO: Replace with actual collection ID
+
+/*
+  Required document-level permissions for bookings:
+    Permission.read(Role.user(ownerId)),
+    Permission.read(Role.team('admins')),
+    Permission.update(Role.team('admins')).
+  Note: Use Role and Permission when creating documents so teams/users have proper access.
+*/
+
+type BookingStatus = 'pending' | 'accepted' | 'awaiting_payment' | 'finished';
+
 export default function Dashboard() {
   const [activeTab, setActiveTab] = useState<'signup' | 'login'>('signup');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -34,6 +48,7 @@ export default function Dashboard() {
   const [transportMessage, setTransportMessage] = useState('');
   const [transportError, setTransportError] = useState('');
   const [adminBookings, setAdminBookings] = useState<any[]>([]);
+  const [savingId, setSavingId] = useState<string | null>(null);
   const { navigate } = useRouter();
 
   // Check if user is already authenticated
@@ -41,14 +56,14 @@ export default function Dashboard() {
     const checkAuth = async () => {
       try {
         const currentUser = await account.get();
-        const role = currentUser.email?.includes('admin') ? 'admin' : 'user';
+        const role: 'user' | 'admin' = (currentUser.prefs as any)?.role === 'admin' ? 'admin' : 'user'; // TODO: Strongly type Appwrite prefs access
         setUser({ name: currentUser.name, email: currentUser.email, role });
         setIsAuthenticated(true);
 
         // Fetch admin bookings if admin
         if (role === 'admin') {
           try {
-            const response = await databases.listDocuments('691b378400072f91e003', 'bookings');
+            const response = await databases.listDocuments(DB_ID, COLLECTION_ID);
             setAdminBookings(response.documents);
           } catch (error) {
             console.error('Failed to fetch bookings:', error);
@@ -198,7 +213,7 @@ export default function Dashboard() {
 
       // Get user info and update state
       const currentUser = await account.get();
-      const role = currentUser.email?.includes('admin') ? 'admin' : 'user';
+      const role: 'user' | 'admin' = (currentUser.prefs as any)?.role === 'admin' ? 'admin' : 'user'; // TODO: Strongly type Appwrite prefs access
       setUser({ name: currentUser.name, email: currentUser.email, role });
       setIsAuthenticated(true);
       console.log('User info:', currentUser);
@@ -636,13 +651,28 @@ export default function Dashboard() {
                         <select
                           value={booking.status}
                           onChange={async (e) => {
+                            if (user?.role !== 'admin') {
+                              alert('You do not have permission to update booking status.');
+                              return;
+                            }
+                            const newStatus = e.target.value as BookingStatus;
+                            const prevStatus = booking.status as BookingStatus;
+                            // Optimistically update UI
+                            setAdminBookings(prev => prev.map(b => b.$id === booking.$id ? { ...b, status: newStatus } : b));
+                            setSavingId(booking.$id);
                             try {
-                              await databases.updateDocument('691b378400072f91e003', 'bookings', booking.$id, { status: e.target.value });
-                              setAdminBookings(prev => prev.map(b => b.$id === booking.$id ? { ...b, status: e.target.value } : b));
+                              // Use DB_ID/COLLECTION_ID constants defined above
+                              await databases.updateDocument(DB_ID, COLLECTION_ID, booking.$id, { status: newStatus });
                             } catch (error) {
                               console.error('Failed to update status:', error);
+                              // Revert to previous status
+                              setAdminBookings(prev => prev.map(b => b.$id === booking.$id ? { ...b, status: prevStatus } : b));
+                              alert('Failed to update booking status. Please try again.');
+                            } finally {
+                              setSavingId(null);
                             }
                           }}
+                          disabled={savingId === booking.$id}
                           className="px-3 py-1 border border-gray-300 rounded text-sm dark:border-gray-600 dark:bg-gray-700"
                         >
                           <option value="pending">Pending</option>
