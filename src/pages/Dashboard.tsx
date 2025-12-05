@@ -2,32 +2,37 @@ import { useState, useEffect, type FormEvent, Fragment } from 'react';
 import {
   ArrowRight,
   Calendar,
-  Clock,
   History,
   Home,
   Lock,
-  LogIn,
-  LogOut,
   MessageSquare,
+  Mail,
   Newspaper,
   ShieldCheck,
   BusFront,
   User,
-  UserPlus,
-  Wrench
+  Wrench,
+  Wallet,
+  BookOpen,
+  Award,
+  Check,
+  AlertTriangle
 } from 'lucide-react';
 import DarkModeToggle from '../components/DarkModeToggle';
+import { sampleProfiles } from '../data/sampleData';
 import { useRouter } from '../context/RouterContext';
-import { Account, Databases } from 'appwrite';
+import { Account, Databases, ID, Query } from 'appwrite';
 import client from '../appwrite';
+import { TransportationPreference, TransportPreferenceDocument, PaymentStatus } from '../types';
 
 // Create Account instance once at module level
 const account = new Account(client);
 const databases = new Databases(client);
 
 // Appwrite DB and Collection IDs — update these placeholders with your actual database and collection IDs
-const DB_ID = '691b378400072f91e003'; // TODO: Replace with actual DB ID
-const COLLECTION_ID = 'bookings'; // TODO: Replace with actual collection ID
+const DB_ID = import.meta.env.VITE_APPWRITE_DATABASE_ID || '691b378400072f91e003';
+const BOOKINGS_COLLECTION_ID = import.meta.env.VITE_APPWRITE_BOOKINGS_COLLECTION_ID || 'bookings';
+const PROFILES_COLLECTION_ID = import.meta.env.VITE_APPWRITE_PROFILES_COLLECTION_ID || 'profiles';
 
 /*
   Required document-level permissions for bookings:
@@ -36,8 +41,18 @@ const COLLECTION_ID = 'bookings'; // TODO: Replace with actual collection ID
     Permission.update(Role.team('admins')).
   Note: Use Role and Permission when creating documents so teams/users have proper access.
 */
-
 type BookingStatus = 'pending' | 'accepted' | 'awaiting_payment' | 'finished';
+
+type ProfileSummary = {
+  fullName: string;
+  email: string;
+  course?: string;
+  level?: string;
+  hobbies?: string;
+  bio?: string;
+  transportationPreference?: TransportationPreference | string;
+  paymentStatus?: PaymentStatus | string;
+};
 
 export default function Dashboard() {
   const [activeTab, setActiveTab] = useState<'signup' | 'login'>('signup');
@@ -47,8 +62,12 @@ export default function Dashboard() {
   const [transportChoice, setTransportChoice] = useState<'yes' | 'no' | ''>('');
   const [transportMessage, setTransportMessage] = useState('');
   const [transportError, setTransportError] = useState('');
-  const [adminBookings, setAdminBookings] = useState<any[]>([]);
+  const [existingTransportPreference, setExistingTransportPreference] = useState<TransportPreferenceDocument | null>(null);
+  const [transportLoading, setTransportLoading] = useState<boolean>(false);
+  const [adminBookings, setAdminBookings] = useState<unknown[]>([]);
   const [savingId, setSavingId] = useState<string | null>(null);
+  const [profileSummary, setProfileSummary] = useState<ProfileSummary | null>(null);
+  const [isProfileSummaryLoading, setIsProfileSummaryLoading] = useState(false);
   const { navigate } = useRouter();
 
   // Check if user is already authenticated
@@ -56,7 +75,7 @@ export default function Dashboard() {
     const checkAuth = async () => {
       try {
         const currentUser = await account.get();
-        const role: 'user' | 'admin' = (currentUser.prefs as any)?.role === 'admin' ? 'admin' : 'user'; // TODO: Strongly type Appwrite prefs access
+        const role: 'user' | 'admin' = ((currentUser as { prefs?: { role?: string } }).prefs?.role === 'admin') ? 'admin' : 'user'; // TODO: Strongly type Appwrite prefs access
         setUser({ name: currentUser.name, email: currentUser.email, role });
         setIsAuthenticated(true);
 
@@ -69,8 +88,14 @@ export default function Dashboard() {
             console.error('Failed to fetch bookings:', error);
           }
         }
-      } catch (error) {
-        console.log('User not authenticated');
+        // Load profile for user on sign in
+        try {
+          await hydrateProfileSummary(currentUser.$id, currentUser.name, currentUser.email);
+        } catch (err) {
+          console.error('Failed to hydrate profile summary:', err);
+        }
+      } catch (err) {
+        console.log('User not authenticated', err);
         setIsAuthenticated(false);
         setUser(null);
       } finally {
@@ -89,14 +114,38 @@ export default function Dashboard() {
     }
   }, [isAuthenticated]);
 
-  const menuItems = [
+  const loadTransportationPreference = async () => {
+    if (!isAuthenticated) return;
+    try {
+      const currentUser = await account.get();
+      const databaseId = DB_ID;
+      const collectionId = import.meta.env.VITE_APPWRITE_TRANSPORT_COLLECTION_ID || 'transport_preferences';
+      const response = await databases.listDocuments(databaseId, collectionId, [Query.equal('userId', currentUser.$id), Query.limit(1), Query.orderDesc('$createdAt')]);
+      if (response.documents.length > 0) {
+        const preference = response.documents[0] as TransportPreferenceDocument;
+        setExistingTransportPreference(preference);
+        setTransportChoice(preference.transportationPreference === 'yes_transportation' ? 'yes' : 'no');
+        // Update profile summary transportationPreference if we already have profileSummary
+        setProfileSummary(prev => prev ? { ...prev, transportationPreference: preference.transportationPreference } : prev);
+      }
+    } catch (error) {
+      console.error('Failed to load transportation preference:', error);
+    }
+  };
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      loadTransportationPreference();
+    }
+  }, [isAuthenticated]);
+
+  const userMenuItems = [
     {
       title: 'Book a Room',
       description: 'Reserve your accommodation by filling out our booking form.',
       icon: Calendar,
       path: '/current-booking',
-      requiresAuth: false,
-      roles: ['user', 'admin']
+      requiresAuth: false
     },
     {
       title: 'Current Booking',
@@ -104,7 +153,7 @@ export default function Dashboard() {
       icon: Home,
       path: '/current-booking',
       requiresAuth: true,
-      roles: ['user', 'admin']
+      // roles: ['user', 'admin']
     },
     {
       title: 'Booking History',
@@ -112,7 +161,7 @@ export default function Dashboard() {
       icon: History,
       path: '/booking-history',
       requiresAuth: true,
-      roles: ['user', 'admin']
+      // roles: ['user', 'admin']
     },
     {
       title: 'News & Updates',
@@ -120,7 +169,7 @@ export default function Dashboard() {
       icon: Newspaper,
       path: '/news',
       requiresAuth: false,
-      roles: ['user', 'admin']
+      // roles: ['user', 'admin']
     },
     {
       title: 'Maintenance',
@@ -128,7 +177,7 @@ export default function Dashboard() {
       icon: Wrench,
       path: '/maintenance',
       requiresAuth: true,
-      roles: ['user', 'admin']
+      // roles: ['user', 'admin']
     },
     {
       title: 'Messages',
@@ -136,7 +185,7 @@ export default function Dashboard() {
       icon: MessageSquare,
       path: '/messages',
       requiresAuth: true,
-      roles: ['user', 'admin']
+      // roles: ['user', 'admin']
     },
     {
       title: 'Support',
@@ -144,26 +193,92 @@ export default function Dashboard() {
       icon: ShieldCheck,
       path: '/support',
       requiresAuth: false,
-      roles: ['user', 'admin']
+      // roles: ['user', 'admin']
     },
-    // Admin only items
+    // Admin only items (deprecated: 'Admin Dashboard' removed from the general menu)
+    // Booking Management removed from main user menu to avoid accidental admin access
+  ];
+
+  const hydrateProfileSummary = async (userId: string, fallbackName: string, fallbackEmail: string) => {
+    setIsProfileSummaryLoading(true);
+    try {
+      if (DB_ID && PROFILES_COLLECTION_ID) {
+        const response = await databases.listDocuments(DB_ID, PROFILES_COLLECTION_ID, [Query.equal('userId', userId)]);
+        if (response.documents.length > 0) {
+          const doc: any = response.documents[0];
+          setProfileSummary({
+            fullName: doc.fullName || fallbackName,
+            email: doc.email || fallbackEmail,
+            course: doc.course || 'Not set',
+            level: doc.level || 'Not set',
+            hobbies: doc.hobbies || 'Not set',
+            bio: doc.bio || 'Not set',
+            transportationPreference: doc.transportationPreference || undefined,
+            paymentStatus: (doc.paymentStatus as PaymentStatus) || 'Pending'
+          });
+          return;
+        }
+      }
+      const fallbackProfile = sampleProfiles.find(profile => profile.email === fallbackEmail) || sampleProfiles[0];
+      setProfileSummary({
+        fullName: fallbackProfile?.fullName || fallbackName,
+        email: fallbackProfile?.email || fallbackEmail,
+        course: 'Not set',
+        level: 'Not set',
+        hobbies: 'Not set',
+        bio: 'Not set',
+        transportationPreference: undefined,
+        paymentStatus: fallbackProfile?.paymentStatus || 'Pending'
+      });
+    } catch (err) {
+      console.error('Unable to load profile summary', err);
+    } finally {
+      setIsProfileSummaryLoading(false);
+    }
+  };
+
+  const adminMenuItems = [
+    // 'Manage Student Bookings' removed from the admin menu per request
     {
-      title: 'Admin Dashboard',
-      description: 'Manage bookings, users, and system settings.',
+      title: 'Transportation Survey Results',
+      description: 'View and analyze all student transportation preferences.',
+      icon: BusFront,
+      path: '/admin/transportation',
+      requiresAuth: true
+    },
+    {
+      title: 'Messages',
+      description: 'Communicate with property management and access your message history.',
+      icon: MessageSquare,
+      path: '/messages',
+      requiresAuth: true
+    },
+    {
+      title: 'Maintenance',
+      description: 'Submit maintenance requests and track the status of your service tickets.',
+      icon: Wrench,
+      path: '/maintenance',
+      requiresAuth: true
+    },
+    {
+      title: 'News & Updates',
+      description: 'Stay informed about property updates, community events, and announcements.',
+      icon: Newspaper,
+      path: '/news',
+      requiresAuth: false
+    },
+    {
+      title: 'Support',
+      description: 'Get help from our support team, access FAQ, and contact information.',
       icon: ShieldCheck,
-      path: '/admin',
-      requiresAuth: true,
-      roles: ['admin']
-    },
-    {
-      title: 'Booking Management',
-      description: 'Review and update booking statuses.',
-      icon: Calendar,
-      path: '/admin/bookings',
-      requiresAuth: true,
-      roles: ['admin']
+      path: '/support',
+      requiresAuth: true
     }
   ];
+
+  const menuItems = user?.role === 'admin' ? adminMenuItems : userMenuItems;
+  // Defensive filter: ensure no direct '/admin' landing card shows in menus for any user
+  const filteredMenuItems = menuItems.filter((item) => item.path !== '/admin');
 
   const sampleNews = [
     {
@@ -213,34 +328,35 @@ export default function Dashboard() {
 
       // Get user info and update state
       const currentUser = await account.get();
-      const role: 'user' | 'admin' = (currentUser.prefs as any)?.role === 'admin' ? 'admin' : 'user'; // TODO: Strongly type Appwrite prefs access
+      const role: 'user' | 'admin' = ((currentUser as { prefs?: { role?: string } }).prefs?.role === 'admin') ? 'admin' : 'user'; // TODO: Strongly type Appwrite prefs access
       setUser({ name: currentUser.name, email: currentUser.email, role });
       setIsAuthenticated(true);
       console.log('User info:', currentUser);
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error(`${mode} failed:`, error);
+      const err = error as { code?: number; type?: string; message?: string; name?: string };
 
       // Provide more specific error messages based on error type
-      let errorMessage = error.message || 'An unexpected error occurred';
+      let errorMessage = (err.message as string) || 'An unexpected error occurred';
 
       // Check for specific Appwrite error codes first
-      if (error.code === 409) {
+      if (err.code === 409) {
         errorMessage = 'An account with this email already exists. Please try signing in instead.';
-      } else if (error.code === 401) {
+      } else if (err.code === 401) {
         errorMessage = 'Invalid email or password. Please check your credentials.';
-      } else if (error.code === 400) {
+      } else if (err.code === 400) {
         errorMessage = 'Invalid input. Please check your email and password meet the requirements.';
-      } else if (error.type === 'general_unauthorized_scope' || error.code === 403) {
+      } else if (err.type === 'general_unauthorized_scope' || err.code === 403) {
         errorMessage = 'Authentication service is not properly configured. Please contact support.';
-      } else if (error.type === 'project_unknown' || error.message?.includes('project') && error.message?.includes('not found')) {
+      } else if (err.type === 'project_unknown' || (err.message && err.message.includes('project') && err.message.includes('not found'))) {
         errorMessage = 'Authentication service is not available. Please contact support.';
-      } else if (error.message?.includes('CORS') || error.type === 'general_cors_disabled') {
+      } else if ((err.message && err.message.includes('CORS')) || err.type === 'general_cors_disabled') {
         errorMessage = 'Cannot connect to authentication service. Please try again later or contact support.';
-      } else if (error.name === 'TypeError' && error.message?.includes('fetch')) {
+      } else if (err.name === 'TypeError' && err.message && err.message.includes('fetch')) {
         // Only treat as network error if it's a TypeError with fetch (actual network failure)
         errorMessage = 'Network error. Please check your internet connection and try again.';
-      } else if (error.message?.toLowerCase().includes('network') && !error.message?.includes('fetch')) {
+      } else if (err.message && err.message.toLowerCase().includes('network') && !err.message.includes('fetch')) {
         // Only treat as network error if explicitly mentioned and not just from fetch API
         errorMessage = 'Network error. Please check your internet connection and try again.';
       }
@@ -249,10 +365,10 @@ export default function Dashboard() {
     }
   };
 
-  const handleTransportationSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleTransportationSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    if (!isAuthenticated) {
+    if (!isAuthenticated || !user) {
       alert('Please sign in to share your transportation preference.');
       return;
     }
@@ -263,12 +379,34 @@ export default function Dashboard() {
     }
 
     setTransportError('');
-    const message = transportChoice === 'yes'
-      ? 'Thanks! We will prioritize transportation services based on interest.'
-      : 'Thanks for the feedback. Transportation will remain optional for now.';
-    setTransportMessage(message);
-    console.log('Transportation preference submitted:', transportChoice);
+    setTransportLoading(true);
+
+    try {
+      const databaseId = DB_ID;
+      const collectionId = import.meta.env.VITE_APPWRITE_TRANSPORT_COLLECTION_ID || 'transport_preferences';
+      const transportationPreference: TransportationPreference = transportChoice === 'yes' ? 'yes_transportation' : 'no_own_ride';
+      const currentUser = await account.get();
+      const preferenceData = { userId: currentUser.$id, studentName: currentUser.name || user?.name || 'Anonymous', transportationPreference };
+
+      if (existingTransportPreference) {
+        await databases.updateDocument(databaseId, collectionId, existingTransportPreference.$id, preferenceData);
+      } else {
+        const newPref = await databases.createDocument(databaseId, collectionId, ID.unique(), preferenceData);
+        setExistingTransportPreference(newPref as TransportPreferenceDocument);
+      }
+
+      const message = transportChoice === 'yes' ? 'Thanks! We will prioritize transportation services based on interest.' : 'Thanks for the feedback. Transportation will remain optional for now.';
+      setTransportMessage(message);
+    } catch (error: unknown) {
+      const err = error as { message?: string };
+      console.error('Failed to save transport preference', err);
+      setTransportError('Failed to save preference. Please try again.');
+    } finally {
+      setTransportLoading(false);
+    }
   };
+
+  // (Old placeholder handleTransportationSubmit removed in favor of async version above)
 
   const handleGoogleAuth = async () => {
     try {
@@ -292,14 +430,10 @@ export default function Dashboard() {
     }
   };
 
-  const handleMenuItemClick = (path: string, requiresAuth: boolean, roles: string[]) => {
+  const handleMenuItemClick = (path: string, requiresAuth: boolean) => {
     console.log('Menu item clicked:', path, 'requiresAuth:', requiresAuth, 'isAuthenticated:', isAuthenticated, 'userRole:', user?.role);
     if (requiresAuth && !isAuthenticated) {
       alert('Please sign in to access this feature.');
-      return;
-    }
-    if (!roles.includes(user?.role || 'user')) {
-      alert('You do not have permission to access this feature.');
       return;
     }
     console.log('Calling navigate with:', path);
@@ -318,7 +452,7 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-12 dark:bg-gray-900">
+    <div className="pt-[115px] pb-16 md:pt-12 md:pb-12 min-h-screen bg-gray-50 dark:bg-gray-900">
       <div className="container mx-auto px-4">
         {/* Mobile Dark Mode Toggle */}
         <div className="mb-6 flex justify-end md:hidden">
@@ -445,7 +579,7 @@ export default function Dashboard() {
                     onClick={() => navigate('/profile')}
                     className="px-4 py-2 text-sm font-medium text-rose-600 bg-rose-50 border border-rose-200 rounded-lg hover:bg-rose-100 transition-colors dark:text-rose-400 dark:bg-rose-900/20 dark:border-rose-800 dark:hover:bg-rose-900/30"
                   >
-                    Account
+                    Personalize Profile
                   </button>
                   <button
                     onClick={handleLogout}
@@ -458,6 +592,75 @@ export default function Dashboard() {
             </div>
           )}
 
+          {/* Profile Snapshot - 6 cards */}
+          {isAuthenticated && (
+            <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Profile Snapshot</h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">A quick view of your key profile details.</p>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => navigate('/profile')}
+                    className="px-4 py-2 text-sm font-medium text-rose-600 bg-rose-50 border border-rose-200 rounded-lg hover:bg-rose-100 transition-colors dark:text-rose-400 dark:bg-rose-900/20"
+                  >
+                    Personalize Profile
+                  </button>
+                </div>
+              </div>
+
+              {isProfileSummaryLoading ? (
+                <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  {[0, 1, 2, 3, 4, 5].map((i) => (
+                    <div key={i} className="h-16 rounded-lg bg-gray-100 animate-pulse dark:bg-gray-700" />
+                  ))}
+                </div>
+              ) : (
+                <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  {[
+                    { label: 'Name', value: profileSummary?.fullName || user?.name || 'Not set', icon: User },
+                    { label: 'Course', value: profileSummary?.course || 'Not set', icon: BookOpen },
+                    { label: 'Level', value: profileSummary?.level || 'Not set', icon: Award },
+                    { label: 'Hobbies', value: profileSummary?.hobbies || 'Not set', icon: Newspaper },
+                    { label: 'Bio', value: profileSummary?.bio || 'Not set', icon: Mail },
+                    { label: 'Transportation', value: (existingTransportPreference?.transportationPreference ?? profileSummary?.transportationPreference) || 'Not set yet', icon: BusFront }
+                  ].map((field, idx) => {
+                    const completed = field.value && field.value !== 'Not set' && field.value !== 'Not set yet' && field.value !== 'Pending';
+                    const Icon = field.icon as any;
+                    let displayValue = field.value as string;
+                    if (displayValue === 'yes_transportation') displayValue = 'Yes, include transportation';
+                    if (displayValue === 'no_own_ride') displayValue = 'No, I can arrange my own ride';
+
+                    return (
+                      <div
+                        key={idx}
+                        className={`rounded-lg border p-3 ${completed ? 'bg-emerald-50 border-emerald-200 dark:bg-emerald-900/20 dark:border-emerald-600' : 'bg-white dark:bg-gray-800'}`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className={`rounded-full p-2 ${completed ? 'bg-emerald-600 text-white dark:bg-emerald-500' : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300'}`}>
+                            {/* For special cases (Hobbies, Bio) use emoticons instead of check icons */}
+                            {field.label === 'Hobbies' ? (
+                              <span className="text-lg">🕺</span>
+                            ) : field.label === 'Bio' ? (
+                              <span className="text-lg">🧍</span>
+                            ) : (
+                              <Icon className="h-4 w-4" />
+                            )}
+                          </div>
+                          <div>
+                            <p className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">{field.label}</p>
+                            <p className="text-sm font-semibold text-gray-900 dark:text-white">{displayValue}</p>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Menu Items - Always visible */}
           <div className="space-y-4">
             <div className="text-center mb-4">
@@ -467,11 +670,11 @@ export default function Dashboard() {
               </p>
             </div>
 
-            {menuItems.filter(item => item.roles.includes(user?.role || 'user')).map((item) => {
+            {filteredMenuItems.map((item) => {
               const Icon = item.icon;
               const isDisabled = item.requiresAuth && !isAuthenticated;
 
-              if (item.title === 'Support') {
+              if (item.title === 'Transportation Survey' && user?.role !== 'admin') {
                 return (
                   <Fragment key={item.title}>
                     <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800">
@@ -526,9 +729,10 @@ export default function Dashboard() {
                           )}
                           <button
                             type="submit"
-                            className="inline-flex items-center gap-2 rounded-lg bg-rose-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-rose-700"
+                            disabled={transportLoading}
+                            className="inline-flex items-center gap-2 rounded-lg bg-rose-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-rose-700 disabled:opacity-50 disabled:cursor-not-allowed"
                           >
-                            Submit preference
+                            {transportLoading ? 'Submitting...' : 'Submit preference'}
                           </button>
                         </form>
                       ) : (
@@ -539,7 +743,7 @@ export default function Dashboard() {
                     </div>
 
                     <button
-                      onClick={() => handleMenuItemClick(item.path, item.requiresAuth, item.roles)}
+                      onClick={() => handleMenuItemClick(item.path, item.requiresAuth)}
                       disabled={isDisabled}
                       className={`w-full rounded-xl border p-6 text-left transition ${isDisabled
                         ? 'border-gray-200 bg-gray-100 opacity-60 dark:border-gray-700 dark:bg-gray-800'
@@ -574,7 +778,7 @@ export default function Dashboard() {
               return (
                 <button
                   key={item.title}
-                  onClick={() => handleMenuItemClick(item.path, item.requiresAuth, item.roles)}
+                  onClick={() => handleMenuItemClick(item.path, item.requiresAuth)}
                   disabled={isDisabled}
                   className={`w-full rounded-xl border p-6 text-left transition ${isDisabled
                     ? 'border-gray-200 bg-gray-100 opacity-60 dark:border-gray-700 dark:bg-gray-800'
@@ -620,7 +824,7 @@ export default function Dashboard() {
                 ))}
               </div>
               <button
-                onClick={() => handleMenuItemClick('/news', false, ['user', 'admin'])}
+                onClick={() => handleMenuItemClick('/news', false)}
                 className="mt-4 text-sm text-rose-600 hover:text-rose-700 dark:text-rose-400 dark:hover:text-rose-300"
               >
                 View all news →
@@ -646,7 +850,48 @@ export default function Dashboard() {
                       <div className="flex justify-between items-start mb-2">
                         <div>
                           <p className="font-medium text-gray-900 dark:text-white">{booking.fullName}</p>
-                          <p className="text-sm text-gray-500 dark:text-gray-400">{booking.email}</p>
+                          <div className="mt-6">
+                            <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">
+                              Profile snapshot
+                            </p>
+                            {isProfileSummaryLoading ? (
+                              <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                                {[0, 1, 2, 3, 4, 5].map(item => (
+                                  <div key={item} className="h-16 rounded-lg bg-gray-100 animate-pulse dark:bg-gray-700" />
+                                ))}
+                              </div>
+                            ) : (
+                              <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                                {[
+                                  { label: 'Name', value: profileSummary?.fullName || user?.name || 'Not set', icon: User },
+                                  { label: 'Email', value: profileSummary?.email || user?.email || 'Not set', icon: Mail },
+                                  { label: 'Course', value: profileSummary?.course || 'Not set', icon: Calendar },
+                                  { label: 'Level', value: profileSummary?.level || 'Not set', icon: User },
+                                  { label: 'Hobbies', value: profileSummary?.hobbies || 'Not set', icon: Newspaper },
+                                  { label: 'Payment Status', value: profileSummary?.paymentStatus || 'Pending', icon: Wallet }
+                                ].map((field, idx) => {
+                                  const completed = field.value && field.value !== 'Not set' && field.value !== 'Pending' && field.value !== '';
+                                  const Icon = field.icon as any;
+                                  return (
+                                    <div
+                                      key={idx}
+                                      className={`rounded-lg border p-3 ${completed ? 'bg-emerald-50 border-emerald-200 dark:bg-emerald-900/20 dark:border-emerald-600' : 'bg-white dark:bg-gray-800'}`}
+                                    >
+                                      <div className="flex items-center gap-3">
+                                        <div className={`rounded-full p-2 ${completed ? 'bg-emerald-600 text-white dark:bg-emerald-500' : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300'}`}>
+                                          {completed ? <Check className="h-4 w-4" /> : <AlertTriangle className="h-4 w-4" />}
+                                        </div>
+                                        <div>
+                                          <p className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">{field.label}</p>
+                                          <p className="text-sm font-semibold text-gray-900 dark:text-white">{field.value}</p>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            )}
+                          </div>
                         </div>
                         <select
                           value={booking.status}

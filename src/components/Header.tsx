@@ -40,7 +40,8 @@ export default function Header() {
   };
 
   return (
-    <header className="bg-white/95 dark:bg-gray-800/95 shadow-md sticky top-0 z-50 transition-colors backdrop-blur supports-[backdrop-filter]:bg-white/80 dark:supports-[backdrop-filter]:bg-gray-800/80">
+    // Fixed on mobile (always visible) and sticky on medium+ screens.
+    <header className="fixed md:sticky top-0 left-0 right-0 z-50 bg-white/95 dark:bg-gray-800/95 shadow-md transition-colors backdrop-blur supports-[backdrop-filter]:bg-white/80 dark:supports-[backdrop-filter]:bg-gray-800/80">
       <div className="container mx-auto px-4">
         <div className="flex flex-col md:flex-row items-center justify-center md:justify-between gap-4 h-[115px]">
           <button

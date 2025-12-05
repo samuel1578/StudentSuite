@@ -76,3 +76,56 @@ export interface BookingFormData {
   guests: number;
   specialRequests?: string;
 }
+
+export type ProfileField = 'fullName' | 'email' | 'phone' | 'room' | 'paymentStatus';
+
+export interface EmergencyContact {
+  name: string;
+  relationship: string;
+  phone: string;
+}
+
+export interface RoomAssignment {
+  roomId: string;
+  roomTitle: string;
+  bed?: string;
+  moveInDate?: string;
+  moveOutDate?: string;
+}
+
+export type PaymentStatus = 'Paid' | 'Pending' | 'Overdue';
+
+export interface UserProfile {
+  id: string;
+  userId: string;
+  fullName: string;
+  email: string;
+  phone?: string;
+  preferredName?: string;
+  level?: string;
+  avatarUrl?: string;
+  room?: RoomAssignment;
+  paymentStatus?: PaymentStatus;
+  emergencyContact?: EmergencyContact;
+  preferences?: string | string[];
+  bio?: string;
+  updatedAt?: string;
+  completionPercent?: number;
+}
+
+export interface PasswordUpdateRequest {
+  currentPassword: string;
+  newPassword: string;
+  confirmPassword: string;
+}
+
+export type TransportationPreference = 'yes_transportation' | 'no_own_ride';
+
+export interface TransportPreferenceDocument {
+  $id: string;
+  userId: string;
+  studentName: string;
+  transportationPreference: TransportationPreference;
+  $createdAt: string;
+  $updatedAt: string;
+}

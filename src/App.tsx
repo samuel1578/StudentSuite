@@ -10,6 +10,9 @@ import About from './pages/About';
 import Contact from './pages/Contact';
 import RoomDetail from './pages/RoomDetail';
 import News from './pages/News';
+import Profile from './pages/Profile';
+import TransportationSurvey from './pages/TransportationSurvey';
+import AdminBookings from './pages/AdminBookings';
 import client from './appwrite.ts';
 import { Account } from 'appwrite';
 
@@ -39,6 +42,12 @@ function Router() {
       case '/menu':
       case '/dashboard': // Keep backward compatibility
         return <Dashboard />;
+      case '/profile':
+        return <Profile />;
+      case '/admin/transportation':
+        return <TransportationSurvey />;
+      case '/admin/bookings':
+        return <AdminBookings />;
       case '/about':
         return <About />;
       case '/contact':

@@ -1,4 +1,4 @@
-import { Room, Testimonial, Booking, Property } from '../types';
+import { Room, Testimonial, Booking, Property, UserProfile } from '../types';
 
 export const rooms: Room[] = [
   {
@@ -301,5 +301,31 @@ export const sampleBookings: Booking[] = [
     checkOut: '2023-12-20',
     status: 'Completed',
     totalPrice: '₵3600'
+  }
+];
+
+export const sampleProfiles: UserProfile[] = [
+  {
+    id: 'P001',
+    userId: 'user_001',
+    fullName: 'John Doe',
+    email: 'john@example.com',
+    phone: '+233 24 123 4567',
+    room: {
+      roomId: '1',
+      roomTitle: 'Cozy Single Room',
+      moveInDate: '2024-01-15',
+      moveOutDate: '2024-06-15'
+    },
+    paymentStatus: 'Pending',
+    emergencyContact: {
+      name: 'Mary Doe',
+      relationship: 'Parent',
+      phone: '+233 24 765 4321'
+    },
+    preferences: ['Quiet wing', 'Upper floor'],
+    bio: 'Final-year Computer Science major balancing thesis research and student leadership duties.',
+    completionPercent: 78,
+    updatedAt: '2025-11-20T10:00:00.000Z'
   }
 ];

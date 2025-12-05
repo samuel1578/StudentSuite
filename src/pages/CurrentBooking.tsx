@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Account, Databases, Query, Models } from 'appwrite';
+import { STATUS_META, BookingStatus } from '../lib/statusMeta';
 import { Calendar, Clock, Home, User, Mail, Phone, CheckCircle, AlertCircle } from 'lucide-react';
 import client from '../appwrite';
 import BookingForm from '../components/BookingForm';
@@ -239,9 +240,18 @@ export default function CurrentBooking() {
                                     <Clock className="h-5 w-5 text-rose-500 mt-1" />
                                     <div>
                                         <p className="text-sm text-gray-500 dark:text-gray-400">Status</p>
-                                        <span className="inline-block px-3 py-1 rounded-full text-sm font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400">
-                                            {currentBooking.status}
-                                        </span>
+                                        {(() => {
+                                            const statusKey = (currentBooking.status as BookingStatus) || 'pending';
+                                            const meta = STATUS_META[statusKey];
+                                            return (
+                                                <div>
+                                                    <span className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${meta.bg} ${meta.text}`}>
+                                                        {meta.label}
+                                                    </span>
+                                                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{meta.description}</p>
+                                                </div>
+                                            );
+                                        })()}
                                     </div>
                                 </div>
                             </div>
