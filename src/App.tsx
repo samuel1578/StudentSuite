@@ -13,6 +13,8 @@ import News from './pages/News';
 import Profile from './pages/Profile';
 import TransportationSurvey from './pages/TransportationSurvey';
 import AdminBookings from './pages/AdminBookings';
+import AuthCallback from './pages/AuthCallback';
+import AuthError from './pages/AuthError';
 import client from './appwrite.ts';
 import { Account } from 'appwrite';
 
@@ -52,6 +54,10 @@ function Router() {
         return <About />;
       case '/contact':
         return <Contact />;
+      case '/auth/callback':
+        return <AuthCallback />;
+      case '/auth/error':
+        return <AuthError />;
       default:
         return <Home />;
     }

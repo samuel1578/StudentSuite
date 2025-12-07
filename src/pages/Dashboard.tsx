@@ -24,15 +24,11 @@ import { useRouter } from '../context/RouterContext';
 import { Account, Databases, ID, Query } from 'appwrite';
 import client from '../appwrite';
 import { TransportationPreference, TransportPreferenceDocument, PaymentStatus } from '../types';
+import { DB_ID, BOOKINGS_COLLECTION_ID, PROFILES_COLLECTION_ID, TRANSPORT_COLLECTION_ID } from '../lib/appwriteIds.ts';
 
 // Create Account instance once at module level
 const account = new Account(client);
 const databases = new Databases(client);
-
-// Appwrite DB and Collection IDs — update these placeholders with your actual database and collection IDs
-const DB_ID = import.meta.env.VITE_APPWRITE_DATABASE_ID || '691b378400072f91e003';
-const BOOKINGS_COLLECTION_ID = import.meta.env.VITE_APPWRITE_BOOKINGS_COLLECTION_ID || 'bookings';
-const PROFILES_COLLECTION_ID = import.meta.env.VITE_APPWRITE_PROFILES_COLLECTION_ID || 'profiles';
 
 /*
   Required document-level permissions for bookings:
@@ -82,7 +78,7 @@ export default function Dashboard() {
         // Fetch admin bookings if admin
         if (role === 'admin') {
           try {
-            const response = await databases.listDocuments(DB_ID, COLLECTION_ID);
+            const response = await databases.listDocuments(DB_ID, BOOKINGS_COLLECTION_ID);
             setAdminBookings(response.documents);
           } catch (error) {
             console.error('Failed to fetch bookings:', error);
@@ -119,7 +115,7 @@ export default function Dashboard() {
     try {
       const currentUser = await account.get();
       const databaseId = DB_ID;
-      const collectionId = import.meta.env.VITE_APPWRITE_TRANSPORT_COLLECTION_ID || 'transport_preferences';
+      const collectionId = TRANSPORT_COLLECTION_ID;
       const response = await databases.listDocuments(databaseId, collectionId, [Query.equal('userId', currentUser.$id), Query.limit(1), Query.orderDesc('$createdAt')]);
       if (response.documents.length > 0) {
         const preference = response.documents[0] as TransportPreferenceDocument;
@@ -389,7 +385,7 @@ export default function Dashboard() {
 
     try {
       const databaseId = DB_ID;
-      const collectionId = import.meta.env.VITE_APPWRITE_TRANSPORT_COLLECTION_ID || 'transport_preferences';
+      const collectionId = TRANSPORT_COLLECTION_ID;
       const transportationPreference: TransportationPreference = transportChoice === 'yes' ? 'yes_transportation' : 'no_own_ride';
       const currentUser = await account.get();
       const preferenceData = { userId: currentUser.$id, studentName: currentUser.name || user?.name || 'Anonymous', transportationPreference };
@@ -418,7 +414,9 @@ export default function Dashboard() {
     try {
       // Get current origin for redirect URLs
       const origin = window.location.origin;
-      await account.createOAuth2Session('google' as any, `${origin}/`, `${origin}/`);
+      const successRedirect = `${origin}/auth/callback`;
+      const failureRedirect = `${origin}/auth/error`;
+      await account.createOAuth2Session('google' as any, successRedirect, failureRedirect);
     } catch (error) {
       console.error('Google authentication failed:', error);
       alert('Google authentication is not available. Please use email/password sign in.');
@@ -912,8 +910,8 @@ export default function Dashboard() {
                             setAdminBookings(prev => prev.map(b => b.$id === booking.$id ? { ...b, status: newStatus } : b));
                             setSavingId(booking.$id);
                             try {
-                              // Use DB_ID/COLLECTION_ID constants defined above
-                              await databases.updateDocument(DB_ID, COLLECTION_ID, booking.$id, { status: newStatus });
+                              // Use DB_ID/BOOKINGS_COLLECTION_ID constants defined above
+                              await databases.updateDocument(DB_ID, BOOKINGS_COLLECTION_ID, booking.$id, { status: newStatus });
                             } catch (error) {
                               console.error('Failed to update status:', error);
                               // Revert to previous status
