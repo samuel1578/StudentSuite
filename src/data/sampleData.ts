@@ -214,21 +214,21 @@ export const rooms: Room[] = [
 export const testimonials: Testimonial[] = [
   {
     id: '1',
-    name: 'John Doe',
+    name: 'Samuel Donkor',
     comment: 'Great place to stay near campus! The facilities are excellent and the staff is very helpful.',
-    avatar: 'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=200'
+    avatar: ''
   },
   {
     id: '2',
-    name: 'Ama Kwame',
+    name: 'Latifah Abubakar',
     comment: 'Friendly staff and clean rooms. I feel safe and comfortable here. Highly recommend!',
-    avatar: 'https://images.pexels.com/photos/774909/pexels-photo-774909.jpeg?auto=compress&cs=tinysrgb&w=200'
+    avatar: ''
   },
   {
     id: '3',
-    name: 'Kwesi Mensah',
+    name: 'Eric Yebo',
     comment: 'The best hostel experience I\'ve had. Close to campus and very affordable.',
-    avatar: 'https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg?auto=compress&cs=tinysrgb&w=200'
+    avatar: ''
   },
   {
     id: '4',

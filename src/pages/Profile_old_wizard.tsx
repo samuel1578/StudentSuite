@@ -533,7 +533,7 @@ export default function Profile() {
 
     // Main render function
     return (
-        <div className="pt-[115px] pb-16 md:pt-12 md:pb-12 min-h-screen bg-gray-50 dark:bg-gray-950 relative">
+        <div className="pt-6 pb-12 md:pt-12 md:pb-12 min-h-screen bg-gray-50 dark:bg-gray-950 relative">
             {isWizardOpen && (
                 <div className="fixed inset-0 z-40 overflow-y-auto bg-black/70 backdrop-blur-sm">
                     <div className="mx-auto max-w-6xl px-4 py-10">

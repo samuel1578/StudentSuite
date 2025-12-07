@@ -18,6 +18,13 @@ export default function TestimonialSlider() {
     return () => clearInterval(interval);
   }, []);
 
+  function getInitials(fullName: string) {
+    if (!fullName) return '';
+    const parts = fullName.trim().split(' ');
+    if (parts.length === 1) return parts[0].slice(0, 1).toUpperCase();
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  }
+
   return (
     <div className="relative bg-white dark:bg-gray-800 rounded-lg shadow-lg p-8 md:p-12">
       <Quote className="w-12 h-12 text-blue-600 dark:text-blue-400 mb-4 opacity-50" />
@@ -28,11 +35,17 @@ export default function TestimonialSlider() {
         </p>
 
         <div className="flex items-center gap-4">
-          <img
-            src={testimonials[currentIndex].avatar}
-            alt={testimonials[currentIndex].name}
-            className="w-16 h-16 rounded-full object-cover"
-          />
+          {testimonials[currentIndex].avatar ? (
+            <img
+              src={testimonials[currentIndex].avatar}
+              alt={testimonials[currentIndex].name}
+              className="w-16 h-16 rounded-full object-cover"
+            />
+          ) : (
+            <div className="w-16 h-16 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white flex items-center justify-center font-semibold text-lg">
+              {getInitials(testimonials[currentIndex].name)}
+            </div>
+          )}
           <div>
             <h4 className="font-bold text-gray-800 dark:text-white">
               {testimonials[currentIndex].name}
@@ -56,11 +69,10 @@ export default function TestimonialSlider() {
             <button
               key={index}
               onClick={() => setCurrentIndex(index)}
-              className={`w-2 h-2 rounded-full transition-colors ${
-                index === currentIndex
+              className={`w-2 h-2 rounded-full transition-colors ${index === currentIndex
                   ? 'bg-blue-600 dark:bg-blue-400 w-8'
                   : 'bg-gray-300 dark:bg-gray-600'
-              }`}
+                }`}
               aria-label={`Go to testimonial ${index + 1}`}
             />
           ))}

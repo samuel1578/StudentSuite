@@ -238,7 +238,13 @@ export default function Dashboard() {
   };
 
   const adminMenuItems = [
-    // 'Manage Student Bookings' removed from the admin menu per request
+    {
+      title: 'Manage Student Bookings',
+      description: 'View and manage all student booking requests and reservations.',
+      icon: Calendar,
+      path: '/admin/bookings',
+      requiresAuth: true
+    },
     {
       title: 'Transportation Survey Results',
       description: 'View and analyze all student transportation preferences.',
@@ -452,12 +458,9 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="pt-[115px] pb-16 md:pt-12 md:pb-12 min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="pt-6 pb-12 md:pt-12 md:pb-12 min-h-screen bg-gray-50 dark:bg-gray-900">
       <div className="container mx-auto px-4">
-        {/* Mobile Dark Mode Toggle */}
-        <div className="mb-6 flex justify-end md:hidden">
-          <DarkModeToggle />
-        </div>
+        {/* Mobile Dark Mode Toggle removed — using profile card toggle instead */}
 
         <div className="max-w-2xl mx-auto space-y-6">
           {/* Auth Card - Always visible, transforms when authenticated */}
@@ -556,7 +559,7 @@ export default function Dashboard() {
             </div>
           ) : (
             /* User Profile Card - Shows when authenticated */
-            <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+            <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800 mt-0">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div className="flex items-center gap-4">
                   <div className="h-14 w-14 rounded-full bg-gradient-to-br from-rose-400 to-rose-600 flex items-center justify-center flex-shrink-0">
@@ -581,6 +584,9 @@ export default function Dashboard() {
                   >
                     Personalize Profile
                   </button>
+                  <div className="px-4 py-2 flex items-center justify-center border border-gray-200 rounded-lg bg-gray-50 dark:border-gray-700 dark:bg-gray-800">
+                    <DarkModeToggle />
+                  </div>
                   <button
                     onClick={handleLogout}
                     className="px-4 py-2 text-sm font-medium text-gray-600 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors dark:text-gray-400 dark:bg-gray-800 dark:border-gray-700 dark:hover:bg-gray-700"
